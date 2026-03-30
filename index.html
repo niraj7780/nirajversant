@@ -494,6 +494,22 @@ body::before{
 .pw-footer{margin-top:24px;font-size:11px;color:rgba(255,255,255,.2)}
 @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
 
+/* ══ REGISTRATION FORM ═══════════════════════════════════ */
+.reg-field-label{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:7px}
+.reg-select{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-family:'Outfit',sans-serif;font-size:14px;outline:none;-webkit-appearance:none;appearance:none}
+.reg-select option{background:#1a3a7a;color:#fff}
+.reg-chip-lbl{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);cursor:pointer;font-size:13px;color:rgba(255,255,255,.75);transition:all .15s}
+.reg-chip-lbl:hover{border-color:rgba(96,165,250,.5);background:rgba(96,165,250,.1)}
+.reg-chip-lbl input[type=radio]{accent-color:#60a5fa;width:15px;height:15px;flex-shrink:0}
+.reg-chip-lbl input[type=radio]:checked+*,.reg-chip-lbl:has(input:checked){color:#fff}
+.reg-chip-lbl:has(input:checked){border-color:#60a5fa;background:rgba(96,165,250,.15)}
+/* Welcome banner */
+.welcome-banner{background:linear-gradient(135deg,var(--blue),var(--navy));border-radius:14px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.welcome-avatar{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.welcome-text{color:#fff}
+.welcome-name{font-size:16px;font-weight:700}
+.welcome-sub{font-size:12px;opacity:.7;margin-top:2px}
+
 /* ══ QUICK PRACTICE ══════════════════════════════════════ */
 #pgQP{background:var(--off)}
 #pgQP .qp-outer{max-width:760px;margin:0 auto;padding:32px 24px 80px}
@@ -541,18 +557,140 @@ body::before{
 
 <!-- PASSWORD GATE -->
 <div id="pwGate">
-  <div class="pw-box">
+  <!-- STEP 1: PASSWORD -->
+  <div class="pw-box" id="pwStep1">
     <div class="pw-logo">Niraj<span>Versant</span></div>
     <div class="pw-sub">English Proficiency Practice Platform</div>
-    <div class="pw-label">Enter Password to Continue</div>
+
+    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 16px;margin-bottom:24px;text-align:left">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px">🔑 Access Password</div>
+      <div style="font-size:20px;font-weight:800;color:#60a5fa;letter-spacing:4px;font-family:monospace">VERSANT</div>
+    </div>
+
+    <div class="pw-label">Enter Password</div>
     <div class="pw-input-wrap">
-      <input class="pw-input" id="pwInput" type="password" placeholder="Password" autocomplete="off"
+      <input class="pw-input" id="pwInput" type="password" placeholder="Type password…" autocomplete="off"
         onkeydown="if(event.key==='Enter')checkPw()">
       <button class="pw-eye" id="pwEye" onclick="togglePwEye()" title="Show/hide">👁</button>
     </div>
     <div class="pw-err" id="pwErr"></div>
-    <button class="pw-btn" onclick="checkPw()">Unlock →</button>
+    <button class="pw-btn" onclick="checkPw()">Continue →</button>
     <div class="pw-footer">NirajVersant · Private Access</div>
+  </div>
+
+  <!-- STEP 2: REGISTRATION -->
+  <div class="pw-box" id="pwStep2" style="display:none;max-width:480px;text-align:left">
+    <div style="text-align:center;margin-bottom:20px">
+      <div class="pw-logo" style="margin-bottom:4px">Niraj<span>Versant</span></div>
+      <div style="font-size:13px;color:rgba(255,255,255,.45)">Create your profile to get started</div>
+    </div>
+
+    <!-- Progress dots -->
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:24px">
+      <div id="regDot1" style="width:28px;height:6px;border-radius:3px;background:#60a5fa;transition:all .3s"></div>
+      <div id="regDot2" style="width:8px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);transition:all .3s"></div>
+      <div id="regDot3" style="width:8px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);transition:all .3s"></div>
+    </div>
+
+    <!-- PAGE 1: Basic Info -->
+    <div id="regPage1">
+      <div class="reg-field-label">Full Name *</div>
+      <input class="pw-input" id="regName" type="text" placeholder="Enter your full name" style="margin-bottom:14px;letter-spacing:0">
+
+      <div class="reg-field-label">Mobile Number *</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <select id="regCountryCode" style="padding:11px 10px;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-family:'Outfit',sans-serif;font-size:13px;width:110px;flex-shrink:0">
+          <option value="+91" selected>🇮🇳 +91</option>
+          <option value="+1">🇺🇸 +1</option>
+          <option value="+44">🇬🇧 +44</option>
+          <option value="+61">🇦🇺 +61</option>
+          <option value="+971">🇦🇪 +971</option>
+          <option value="+65">🇸🇬 +65</option>
+          <option value="+60">🇲🇾 +60</option>
+          <option value="+92">🇵🇰 +92</option>
+          <option value="+880">🇧🇩 +880</option>
+        </select>
+        <input class="pw-input" id="regMobile" type="tel" placeholder="Mobile number" style="letter-spacing:0;flex:1" maxlength="15"
+          onkeydown="if(event.key==='Enter')regPage1Next()">
+      </div>
+
+      <div class="pw-err" id="regErr1" style="margin-bottom:10px"></div>
+      <button class="pw-btn" onclick="regPage1Next()">Next →</button>
+    </div>
+
+    <!-- PAGE 2: Details -->
+    <div id="regPage2" style="display:none">
+      <div class="reg-field-label">Qualification</div>
+      <select class="reg-select" id="regQual" style="margin-bottom:14px">
+        <option value="">Select qualification…</option>
+        <option>10th / Secondary</option>
+        <option>12th / Higher Secondary</option>
+        <option>Diploma</option>
+        <option>Bachelor's Degree</option>
+        <option>Master's Degree</option>
+        <option>PhD / Doctorate</option>
+        <option>Professional Certification</option>
+        <option>Other</option>
+      </select>
+
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <div style="flex:1">
+          <div class="reg-field-label">Age</div>
+          <input class="pw-input" id="regAge" type="number" placeholder="Age" min="10" max="99" style="letter-spacing:0">
+        </div>
+        <div style="flex:2">
+          <div class="reg-field-label">Country</div>
+          <select class="reg-select" id="regCountry">
+            <option value="">Select…</option>
+            <option selected>India</option>
+            <option>United States</option>
+            <option>United Kingdom</option>
+            <option>Australia</option>
+            <option>Canada</option>
+            <option>UAE</option>
+            <option>Singapore</option>
+            <option>Malaysia</option>
+            <option>Pakistan</option>
+            <option>Bangladesh</option>
+            <option>Nepal</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pw-err" id="regErr2" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="pw-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);flex:1" onclick="regGoPage(1)">← Back</button>
+        <button class="pw-btn" style="flex:2" onclick="regPage2Next()">Next →</button>
+      </div>
+    </div>
+
+    <!-- PAGE 3: Purpose & Level -->
+    <div id="regPage3" style="display:none">
+      <div class="reg-field-label">Purpose of Using This App *</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="regPurposeGrid">
+        <label class="reg-chip-lbl"><input type="radio" name="regPurpose" value="Job Interview"> 💼 Job Interview</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regPurpose" value="Immigration"> ✈️ Immigration</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regPurpose" value="University Admission"> 🎓 University</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regPurpose" value="Skill Improvement"> 📈 Skill Growth</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regPurpose" value="BPO / Call Centre"> 📞 BPO / Call Centre</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regPurpose" value="Just Practicing"> 🎯 Just Practicing</label>
+      </div>
+
+      <div class="reg-field-label">Your Current English Level *</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px" id="regLevelGrid">
+        <label class="reg-chip-lbl"><input type="radio" name="regLevel" value="Beginner"> 🌱 Beginner — I know basic words and simple sentences</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regLevel" value="Intermediate"> 📗 Intermediate — I can hold conversations but make errors</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regLevel" value="Upper Intermediate"> 📘 Upper Intermediate — I speak confidently in most situations</label>
+        <label class="reg-chip-lbl"><input type="radio" name="regLevel" value="Advanced"> 🏆 Advanced — I communicate fluently and professionally</label>
+      </div>
+
+      <div class="pw-err" id="regErr3" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="pw-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);flex:1" onclick="regGoPage(2)">← Back</button>
+        <button class="pw-btn" style="flex:2;background:linear-gradient(135deg,#3b82f6,#1d4ed8)" onclick="regSubmit()">🚀 Enter App</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1823,30 +1961,41 @@ function getLibItems(t,partKey){
 }
 
 // ═══════════════════════════════════════════════════════════
-// PASSWORD GATE
+// PASSWORD + REGISTRATION GATE
 // ═══════════════════════════════════════════════════════════
 (function(){
-  // Check session — only ask once per browser session
+  // Already authenticated this session?
   if(sessionStorage.getItem('nv_auth')==='1'){
     document.getElementById('pwGate').classList.add('hidden');
+    // Show welcome banner if profile exists
+    const p=JSON.parse(localStorage.getItem('nv_profile')||'null');
+    if(p) setTimeout(()=>showWelcomeBanner(p),300);
     return;
   }
-  // Focus input after a tick
   setTimeout(()=>{const i=document.getElementById('pwInput');if(i)i.focus();},100);
 })();
 
+// ── STEP 1: PASSWORD ──────────────────────────────────────
 function checkPw(){
   const input=document.getElementById('pwInput');
   const err=document.getElementById('pwErr');
   const val=(input.value||'').trim().toLowerCase();
   const validPasswords=['techbee','hcltech','versant','india','english','versanttest','niraj','nirajcharpe','hcl','noida'];
   if(validPasswords.includes(val)){
-    sessionStorage.setItem('nv_auth','1');
-    const gate=document.getElementById('pwGate');
-    gate.style.opacity='0';
-    gate.style.transition='opacity .4s ease';
-    setTimeout(()=>gate.classList.add('hidden'),400);
     err.textContent='';
+    // Check if already registered
+    const profile=JSON.parse(localStorage.getItem('nv_profile')||'null');
+    if(profile && profile.name){
+      // Returning user — skip registration
+      sessionStorage.setItem('nv_auth','1');
+      fadeOutGate();
+      setTimeout(()=>showWelcomeBanner(profile),300);
+    } else {
+      // New user — show registration
+      document.getElementById('pwStep1').style.display='none';
+      document.getElementById('pwStep2').style.display='block';
+      setTimeout(()=>{const i=document.getElementById('regName');if(i)i.focus();},100);
+    }
   } else {
     input.classList.add('error');
     err.textContent='Incorrect password. Please try again.';
@@ -1861,6 +2010,93 @@ function togglePwEye(){
   const e=document.getElementById('pwEye');
   if(i.type==='password'){i.type='text';e.textContent='🙈';}
   else{i.type='password';e.textContent='👁';}
+}
+
+// ── STEP 2: REGISTRATION PAGES ────────────────────────────
+function regGoPage(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('regPage'+i).style.display=i===n?'block':'none';
+  });
+  // Update progress dots
+  [1,2,3].forEach(i=>{
+    const d=document.getElementById('regDot'+i);
+    if(d){
+      d.style.width=i<=n?'28px':'8px';
+      d.style.background=i<=n?'#60a5fa':'rgba(255,255,255,.2)';
+    }
+  });
+}
+
+function regPage1Next(){
+  const name=(document.getElementById('regName').value||'').trim();
+  const mobile=(document.getElementById('regMobile').value||'').trim();
+  const err=document.getElementById('regErr1');
+  if(!name){err.textContent='Please enter your full name.';return;}
+  if(!mobile||mobile.length<7){err.textContent='Please enter a valid mobile number.';return;}
+  if(!/^\d+$/.test(mobile)){err.textContent='Mobile number should contain digits only.';return;}
+  err.textContent='';
+  regGoPage(2);
+  setTimeout(()=>{const i=document.getElementById('regQual');if(i)i.focus();},100);
+}
+
+function regPage2Next(){
+  const err=document.getElementById('regErr2');
+  // age and qualification are optional — just move forward
+  err.textContent='';
+  regGoPage(3);
+}
+
+function regSubmit(){
+  const purpose=document.querySelector('input[name="regPurpose"]:checked');
+  const level=document.querySelector('input[name="regLevel"]:checked');
+  const err=document.getElementById('regErr3');
+  if(!purpose){err.textContent='Please select your purpose of use.';return;}
+  if(!level){err.textContent='Please select your current English level.';return;}
+  err.textContent='';
+
+  const cc=document.getElementById('regCountryCode').value;
+  const mobile=document.getElementById('regMobile').value.trim();
+  const profile={
+    name:document.getElementById('regName').value.trim(),
+    mobile:cc+' '+mobile,
+    qualification:document.getElementById('regQual').value,
+    age:document.getElementById('regAge').value,
+    country:document.getElementById('regCountry').value,
+    purpose:purpose.value,
+    level:level.value,
+    joinedAt:new Date().toLocaleDateString('en-IN',{year:'numeric',month:'short',day:'numeric'}),
+  };
+  localStorage.setItem('nv_profile',JSON.stringify(profile));
+  sessionStorage.setItem('nv_auth','1');
+  fadeOutGate();
+  setTimeout(()=>showWelcomeBanner(profile),400);
+}
+
+function fadeOutGate(){
+  const gate=document.getElementById('pwGate');
+  gate.style.opacity='0';
+  gate.style.transition='opacity .4s ease';
+  setTimeout(()=>gate.classList.add('hidden'),400);
+}
+
+// ── WELCOME BANNER ────────────────────────────────────────
+function showWelcomeBanner(p){
+  const existing=document.getElementById('welcomeBanner');
+  if(existing) existing.remove();
+  const lvlEmoji={Beginner:'🌱','Intermediate':'📗','Upper Intermediate':'📘','Advanced':'🏆'}[p.level]||'📚';
+  const div=document.createElement('div');
+  div.id='welcomeBanner';
+  div.className='welcome-banner';
+  div.innerHTML=`
+    <div class="welcome-avatar">${lvlEmoji}</div>
+    <div class="welcome-text">
+      <div class="welcome-name">Welcome back, ${p.name}! 👋</div>
+      <div class="welcome-sub">${p.level} · ${p.purpose} · Member since ${p.joinedAt}</div>
+    </div>
+    <button onclick="document.getElementById('welcomeBanner').remove()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;padding:4px;margin-left:auto">✕</button>`;
+  // Insert at top of home wrap
+  const hw=document.querySelector('.home-wrap');
+  if(hw) hw.insertBefore(div,hw.firstChild);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2390,10 +2626,10 @@ initHome();
     <button class="fmodal-close" onclick="closeModal('modalDev')">✕</button>
     <div class="dev-avatar">👨‍💻</div>
     <h2>About the Developer</h2>
-    <p>I am <strong>Niraj Charpe</strong>, a scholar under the Early Career Program. I am interested in AI, programming, and new technologies, and I am continuously working on improving my technical knowledge, English communication, and body language for overall professional growth.</p>
+    <p>I am <strong>Niraj Charpe</strong>, a scholar passionate about AI, programming, and new technologies. I am continuously working on improving my technical knowledge, English communication, and body language for overall professional growth.</p>
     <p>This platform was built as a personal project to help myself and others practice English proficiency in a realistic, intelligent, and accessible way — combining modern web technologies with AI to deliver instant feedback.</p>
     <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);line-height:1.9">
-      🎓 Scholar · Early Career Program<br>
+      🎓 Scholar · Tech & AI Enthusiast<br>
       🤖 Interests: AI · Programming · New Technologies<br>
       🎯 Goals: Technical growth · English communication · Professional development
     </div>
