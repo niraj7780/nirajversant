@@ -1421,89 +1421,114 @@ function toggleRec(){recSt==='recording'?stopRec():doRec();}
 
 async function doRec(){
   if(!window.isSecureContext){
-    toast('⚠ Microphone requires HTTPS.');
+    showMicError('🔒 HTTPS required. Open via https:// not http://');
     return;
   }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    toast('⚠ Microphone not supported. Use Chrome or Edge.');
+    showMicError('⚠ Microphone not available. Use Chrome or Edge.');
     return;
   }
+  const lbl=document.getElementById('recLbl');
+  if(lbl){lbl.textContent='⏳ Starting mic…';lbl.className='rec-lbl';}
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
     aChunks=[];
     window._srStopping=false;
     window._liveFinal='';
 
-    // Pick best supported mime
-    const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+    const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4']
+      .find(m=>MediaRecorder.isTypeSupported(m))||'';
     mRec=new MediaRecorder(stream,mime?{mimeType:mime}:{});
     mRec.ondataavailable=e=>{if(e.data&&e.data.size>0)aChunks.push(e.data);};
     mRec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());};
-    mRec.start(100);
+    mRec.start(250);
     recSt='recording';
 
-    // Try Web Speech API simultaneously
+    // Speech Recognition
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(SR){
       function startSR(){
-        if(window._srStopping)return;
-        const sr=new SR();
-        sr.lang=getAccentLang();
-        sr.continuous=true;
-        sr.interimResults=true;
-        sr.maxAlternatives=1;
-        sr.onresult=(e)=>{
-          let interim='';
-          for(let i=e.resultIndex;i<e.results.length;i++){
-            if(e.results[i].isFinal){
-              window._liveFinal+=(window._liveFinal?' ':'')+e.results[i][0].transcript.trim();
-            } else {
-              interim+=e.results[i][0].transcript;
+        if(window._srStopping) return;
+        try{
+          const sr=new SR();
+          sr.lang=getAccentLang();
+          sr.continuous=true;
+          sr.interimResults=true;
+          sr.maxAlternatives=3;
+
+          sr.onresult=(e)=>{
+            let interim='';
+            for(let i=e.resultIndex;i<e.results.length;i++){
+              if(e.results[i].isFinal){
+                window._liveFinal+=(window._liveFinal?' ':'')+e.results[i][0].transcript.trim();
+              } else {
+                interim+=e.results[i][0].transcript;
+              }
             }
-          }
-          const tb=document.getElementById('trBox');
-          if(tb){
-            const show=(window._liveFinal+(interim?' '+interim:'')).trim();
-            if(show){tb.className='transcript has-text';tb.textContent='"'+show+'"';}
-          }
-        };
-        sr.onerror=(ev)=>{
-          const restartable=['network','no-speech','audio-capture','abort'];
-          if(!window._srStopping&&restartable.includes(ev.error)){try{sr.stop();}catch(e){}}
-        };
-        sr.onend=()=>{
-          if(!window._srStopping&&recSt==='recording'){try{startSR();}catch(e){}}
-        };
-        window._liveRec=sr;
-        try{sr.start();}catch(e){}
+            const tb=document.getElementById('trBox');
+            if(tb){
+              const show=(window._liveFinal+(interim?' '+interim:'')).trim();
+              if(show){tb.className='transcript has-text';tb.textContent='"'+show+'"';}
+            }
+          };
+
+          sr.onerror=(ev)=>{
+            if(!window._srStopping){
+              if(ev.error==='no-speech'||ev.error==='network'||ev.error==='audio-capture'||ev.error==='abort'){
+                try{sr.stop();}catch(e){}
+              }
+            }
+          };
+
+          sr.onend=()=>{
+            if(!window._srStopping&&recSt==='recording'){
+              setTimeout(()=>startSR(),200);
+            }
+          };
+
+          window._liveRec=sr;
+          sr.start();
+        }catch(err){console.warn('SR start error:',err);}
       }
       startSR();
     }
 
-    // UI
+    // Update UI
     const btn=document.getElementById('recBtn');
-    const lbl=document.getElementById('recLbl');
     const wrp=document.getElementById('recWrap');
     const bars=document.getElementById('micBars');
+    const tb=document.getElementById('trBox');
     if(btn)btn.classList.add('pulse');
     if(bars)bars.classList.add('show');
     if(lbl){lbl.textContent='🔴 Recording… press mic to stop';lbl.className='rec-lbl active';}
     if(wrp)wrp.classList.add('is-rec');
+    if(tb){tb.className='transcript';tb.textContent='🎙 Listening… speak now';}
 
   }catch(e){
     if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
-      toast('⚠ Mic blocked. Click 🔒 in address bar → Allow Microphone.');
+      showMicError('🚫 Mic blocked!\n1. Click 🔒 in address bar\n2. Set Microphone → Allow\n3. Refresh page & try again');
     } else if(e.name==='NotFoundError'){
-      toast('⚠ No microphone found. Please connect a mic.');
+      showMicError('🎤 No microphone detected. Please connect a mic.');
     } else {
-      toast('⚠ Mic error: '+e.message);
+      showMicError('⚠ Mic error: '+e.message);
     }
   }
 }
 
+function showMicError(msg){
+  const tb=document.getElementById('trBox');
+  const lbl=document.getElementById('recLbl');
+  if(tb){
+    tb.className='transcript has-text';
+    tb.style.cssText+='background:#fef3c7;border-color:#f59e0b;color:#92400e;white-space:pre-line';
+    tb.textContent=msg;
+  }
+  if(lbl){lbl.textContent='Mic unavailable';lbl.className='rec-lbl';}
+  toast(msg.split('\n')[0]);
+}
+
 function stopRec(){
   if(mRec&&recSt==='recording'){
-    mRec.stop();
     recSt='processing';
     window._srStopping=true;
     if(window._liveRec){try{window._liveRec.stop();}catch(e){}}
@@ -1514,126 +1539,45 @@ function stopRec(){
     if(btn){btn.classList.remove('pulse');btn.disabled=true;}
     if(bars)bars.classList.remove('show');
     if(wrp)wrp.classList.remove('is-rec');
-    if(lbl){lbl.textContent='⏳ Processing speech…';lbl.className='rec-lbl';}
-
-    // Wait 900ms for SR to flush its final results
-    setTimeout(()=>{
-      const srText=(window._liveFinal||'').trim();
-      if(srText){
-        // SR worked — use it directly
-        finalizeWithTranscript(srText);
-      } else {
-        // SR failed — transcribe using Claude API with the audio blob
-        transcribeWithClaude();
-      }
-    },900);
+    if(lbl){lbl.textContent='⏳ Processing…';lbl.className='rec-lbl';}
+    try{mRec.stop();}catch(e){}
+    // Wait 1200ms for SR to deliver final results
+    setTimeout(()=>finalizeWithTranscript((window._liveFinal||'').trim()),1200);
   }
-}
-
-async function transcribeWithClaude(){
-  const tb=document.getElementById('trBox');
-  const lbl=document.getElementById('recLbl');
-  if(lbl) lbl.textContent='🤖 Transcribing with AI…';
-  if(tb){
-    tb.className='transcript has-text';
-    tb.innerHTML='<span style="color:var(--blue);font-size:12px">🤖 Transcribing your audio with AI…</span>';
-  }
-
-  // Get expected answer for context
-  let expected='';
-  if(PART==='A') expected=TD.A[QI]||'';
-  else if(PART==='B') expected=TD.B[QI]?.a||'';
-  else if(PART==='C') expected=TD.C[QI]?.a||'';
-
-  try{
-    const blob=new Blob(aChunks,{type:aChunks[0]?.type||'audio/webm'});
-    const b64=await blobToBase64(blob);
-    const b64data=b64.split(',')[1];
-    const mediaType=blob.type||'audio/webm';
-
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:200,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'document',source:{type:'base64',media_type:mediaType,data:b64data}},
-            {type:'text',text:'Listen to this audio and transcribe EXACTLY what the person said. Return ONLY the spoken words — no extra text, no punctuation changes. The person was trying to say: "'+expected+'"'}
-          ]
-        }]
-      })
-    });
-
-    if(resp.ok){
-      const data=await resp.json();
-      const transcript=(data.content?.[0]?.text||'').trim();
-      if(transcript&&transcript.length>1&&!transcript.toLowerCase().includes('cannot process')&&!transcript.toLowerCase().includes('unable to')){
-        finalizeWithTranscript(transcript);
-        return;
-      }
-    }
-  }catch(err){
-    console.warn('Claude audio transcription error:',err);
-  }
-
-  // Both SR and Claude failed — mark as [recorded]
-  finalizeWithTranscript('');
-}
-
-function blobToBase64(blob){
-  return new Promise((res,rej)=>{
-    const r=new FileReader();
-    r.onload=()=>res(r.result);
-    r.onerror=rej;
-    r.readAsDataURL(blob);
-  });
 }
 
 function finalizeWithTranscript(transcript){
   const tb=document.getElementById('trBox');
   const lbl=document.getElementById('recLbl');
-
+  if(tb){
+    tb.style.background='';tb.style.borderColor='';
+    tb.style.color='';tb.style.whiteSpace='';
+  }
   if(transcript&&transcript.length>1){
     saveR(PART,transcript);
     if(tb){
       tb.className='transcript has-text';
-      tb.innerHTML='<span style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">📝 Transcript</span>'+
+      tb.innerHTML='<span style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">📝 You said</span>'+
         '<span>"'+transcript+'"</span>';
     }
     if(lbl){lbl.textContent='✅ Recorded';lbl.className='rec-lbl done';}
   } else {
-    // Nothing transcribed — mark as recorded attempt, AI scorer gives 0.5
     saveR(PART,'[recorded]');
     if(tb){
       tb.className='transcript has-text';
-      tb.innerHTML='<span style="font-size:12px;color:var(--amber);font-weight:600">🎙 Audio recorded — no text captured</span>'+
-        '<span style="display:block;font-size:11px;color:var(--muted);margin-top:4px">Tip: speak clearly after the beep, close to your mic. AI will still score your attempt.</span>';
+      tb.innerHTML='<span style="font-size:12px;color:var(--amber);font-weight:600">🎙 Audio saved — speech not captured</span>'+
+        '<br><span style="font-size:11px;color:var(--muted)">Use Chrome, allow mic in browser settings, and speak clearly. AI scorer gives partial credit.</span>';
     }
     if(lbl){lbl.textContent='✅ Recorded';lbl.className='rec-lbl done';}
   }
-
-  window._liveFinal='';
-  window._liveRec=null;
-  window._srStopping=false;
-  aChunks=[];
+  window._liveFinal='';window._liveRec=null;window._srStopping=false;aChunks=[];
   finalizeRec();
 }
 
-async function processRec(){
-  // Compatibility stub
-  finalizeWithTranscript((window._liveFinal||'').trim());
-}
-
-function finalizeFromSR(){
-  finalizeWithTranscript((window._liveFinal||'').trim());
-}
+async function transcribeWithClaude(){finalizeWithTranscript('');}
+async function processRec(){finalizeWithTranscript((window._liveFinal||'').trim());}
+function finalizeFromSR(){finalizeWithTranscript((window._liveFinal||'').trim());}
+function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
 
 function finalizeRec(){
   recSt='done';
