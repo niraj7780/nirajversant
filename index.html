@@ -1011,7 +1011,7 @@ function initHome(){
     const w=document.createElement('div');
     w.id='compatWarn';
     w.style.cssText='background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:18px;font-size:13px;line-height:1.6;color:#92400e';
-    w.innerHTML='⚠️ <strong>Microphone & Speaker blocked:</strong> This site is running on HTTP. GitHub Pages requires HTTPS. Make sure your repo is accessed via <code>https://yourusername.github.io/...</code> and not <code>http://</code>. <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https" target="_blank" style="color:#b45309;font-weight:600">Enable HTTPS in GitHub Pages settings →</a>';
+    w.innerHTML='⚠️ <strong>Microphone & Speaker blocked:</strong> This site is on HTTP. Both GitHub Pages and Vercel require HTTPS. Access via <code>https://</code> URL. <a href="https://vercel.com/docs" target="_blank" style="color:#b45309;font-weight:600">Deploy on Vercel (recommended) →</a>';
     const hw=document.querySelector('.home-wrap');
     if(hw) hw.insertBefore(w,hw.firstChild);
   } else if(!hasMediaDevices||!hasSR){
@@ -1420,13 +1420,12 @@ function onTF(){
 function toggleRec(){recSt==='recording'?stopRec():doRec();}
 
 async function doRec(){
-  // Must be HTTPS or localhost for mic to work
   if(!window.isSecureContext){
-    toast('⚠ Microphone requires HTTPS. Open via https:// — not http://');
+    toast('⚠ Microphone requires HTTPS.');
     return;
   }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    toast('⚠ Microphone not supported in this browser. Use Chrome or Edge.');
+    toast('⚠ Microphone not supported. Use Chrome or Edge.');
     return;
   }
   try{
@@ -1434,27 +1433,25 @@ async function doRec(){
     aChunks=[];
     window._srStopping=false;
     window._liveFinal='';
+
+    // Pick best supported mime
     const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4'].find(m=>MediaRecorder.isTypeSupported(m))||'';
-    mRec=new MediaRecorder(stream, mime?{mimeType:mime}:{});
+    mRec=new MediaRecorder(stream,mime?{mimeType:mime}:{});
     mRec.ondataavailable=e=>{if(e.data&&e.data.size>0)aChunks.push(e.data);};
     mRec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());};
     mRec.start(100);
     recSt='recording';
 
-    // Start live speech recognition simultaneously
+    // Try Web Speech API simultaneously
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(SR){
-      window._liveFinal='';
-      window._srStopping=false;
-
       function startSR(){
-        if(window._srStopping) return;
+        if(window._srStopping)return;
         const sr=new SR();
         sr.lang=getAccentLang();
         sr.continuous=true;
         sr.interimResults=true;
         sr.maxAlternatives=1;
-
         sr.onresult=(e)=>{
           let interim='';
           for(let i=e.resultIndex;i<e.results.length;i++){
@@ -1470,29 +1467,20 @@ async function doRec(){
             if(show){tb.className='transcript has-text';tb.textContent='"'+show+'"';}
           }
         };
-
         sr.onerror=(ev)=>{
-          // network/no-speech/audio-capture/abort errors: stop and let onend restart
           const restartable=['network','no-speech','audio-capture','abort'];
-          if(!window._srStopping && restartable.includes(ev.error)){
-            try{sr.stop();}catch(e){}
-          }
+          if(!window._srStopping&&restartable.includes(ev.error)){try{sr.stop();}catch(e){}}
         };
-
         sr.onend=()=>{
-          // Auto-restart unless we are intentionally stopping
-          if(!window._srStopping && recSt==='recording'){
-            try{startSR();}catch(e){}
-          }
+          if(!window._srStopping&&recSt==='recording'){try{startSR();}catch(e){}}
         };
-
         window._liveRec=sr;
         try{sr.start();}catch(e){}
       }
-
       startSR();
     }
 
+    // UI
     const btn=document.getElementById('recBtn');
     const lbl=document.getElementById('recLbl');
     const wrp=document.getElementById('recWrap');
@@ -1501,61 +1489,150 @@ async function doRec(){
     if(bars)bars.classList.add('show');
     if(lbl){lbl.textContent='🔴 Recording… press mic to stop';lbl.className='rec-lbl active';}
     if(wrp)wrp.classList.add('is-rec');
+
   }catch(e){
     if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
-      toast('⚠ Mic blocked. Click the 🔒 icon in your browser address bar → Allow Microphone.');
+      toast('⚠ Mic blocked. Click 🔒 in address bar → Allow Microphone.');
     } else if(e.name==='NotFoundError'){
-      toast('⚠ No microphone found. Plug in a mic and try again.');
+      toast('⚠ No microphone found. Please connect a mic.');
     } else {
-      toast('⚠ Mic error: '+e.message+'. Make sure site is on HTTPS.');
+      toast('⚠ Mic error: '+e.message);
     }
   }
 }
 
 function stopRec(){
   if(mRec&&recSt==='recording'){
-    mRec.stop();recSt='processing';
+    mRec.stop();
+    recSt='processing';
     window._srStopping=true;
     if(window._liveRec){try{window._liveRec.stop();}catch(e){}}
     const btn=document.getElementById('recBtn');
     const lbl=document.getElementById('recLbl');
     const bars=document.getElementById('micBars');
+    const wrp=document.getElementById('recWrap');
     if(btn){btn.classList.remove('pulse');btn.disabled=true;}
     if(bars)bars.classList.remove('show');
-    if(lbl){lbl.textContent='⏳ Processing your response…';lbl.className='rec-lbl';}
-    setTimeout(()=>finalizeFromSR(),900);
+    if(wrp)wrp.classList.remove('is-rec');
+    if(lbl){lbl.textContent='⏳ Processing speech…';lbl.className='rec-lbl';}
+
+    // Wait 900ms for SR to flush its final results
+    setTimeout(()=>{
+      const srText=(window._liveFinal||'').trim();
+      if(srText){
+        // SR worked — use it directly
+        finalizeWithTranscript(srText);
+      } else {
+        // SR failed — transcribe using Claude API with the audio blob
+        transcribeWithClaude();
+      }
+    },900);
   }
 }
 
-function finalizeFromSR(){
-  const transcript=(window._liveFinal||'').trim();
+async function transcribeWithClaude(){
   const tb=document.getElementById('trBox');
+  const lbl=document.getElementById('recLbl');
+  if(lbl) lbl.textContent='🤖 Transcribing with AI…';
+  if(tb){
+    tb.className='transcript has-text';
+    tb.innerHTML='<span style="color:var(--blue);font-size:12px">🤖 Transcribing your audio with AI…</span>';
+  }
 
-  if(transcript){
+  // Get expected answer for context
+  let expected='';
+  if(PART==='A') expected=TD.A[QI]||'';
+  else if(PART==='B') expected=TD.B[QI]?.a||'';
+  else if(PART==='C') expected=TD.C[QI]?.a||'';
+
+  try{
+    const blob=new Blob(aChunks,{type:aChunks[0]?.type||'audio/webm'});
+    const b64=await blobToBase64(blob);
+    const b64data=b64.split(',')[1];
+    const mediaType=blob.type||'audio/webm';
+
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:200,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'document',source:{type:'base64',media_type:mediaType,data:b64data}},
+            {type:'text',text:'Listen to this audio and transcribe EXACTLY what the person said. Return ONLY the spoken words — no extra text, no punctuation changes. The person was trying to say: "'+expected+'"'}
+          ]
+        }]
+      })
+    });
+
+    if(resp.ok){
+      const data=await resp.json();
+      const transcript=(data.content?.[0]?.text||'').trim();
+      if(transcript&&transcript.length>1&&!transcript.toLowerCase().includes('cannot process')&&!transcript.toLowerCase().includes('unable to')){
+        finalizeWithTranscript(transcript);
+        return;
+      }
+    }
+  }catch(err){
+    console.warn('Claude audio transcription error:',err);
+  }
+
+  // Both SR and Claude failed — mark as [recorded]
+  finalizeWithTranscript('');
+}
+
+function blobToBase64(blob){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+function finalizeWithTranscript(transcript){
+  const tb=document.getElementById('trBox');
+  const lbl=document.getElementById('recLbl');
+
+  if(transcript&&transcript.length>1){
     saveR(PART,transcript);
     if(tb){
       tb.className='transcript has-text';
       tb.innerHTML='<span style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">📝 Transcript</span>'+
         '<span>"'+transcript+'"</span>';
     }
-    finalizeRec();
+    if(lbl){lbl.textContent='✅ Recorded';lbl.className='rec-lbl done';}
   } else {
+    // Nothing transcribed — mark as recorded attempt, AI scorer gives 0.5
     saveR(PART,'[recorded]');
     if(tb){
       tb.className='transcript has-text';
-      tb.innerHTML='<span style="font-size:12px;color:var(--amber);font-weight:600">⚠ Audio recorded but speech not detected.</span>'+
-        '<span style="display:block;font-size:11px;color:var(--muted);margin-top:4px">Tip: speak clearly into your mic, allow mic permission, and avoid background noise.</span>';
+      tb.innerHTML='<span style="font-size:12px;color:var(--amber);font-weight:600">🎙 Audio recorded — no text captured</span>'+
+        '<span style="display:block;font-size:11px;color:var(--muted);margin-top:4px">Tip: speak clearly after the beep, close to your mic. AI will still score your attempt.</span>';
     }
-    finalizeRec();
+    if(lbl){lbl.textContent='✅ Recorded';lbl.className='rec-lbl done';}
   }
+
   window._liveFinal='';
   window._liveRec=null;
   window._srStopping=false;
+  aChunks=[];
+  finalizeRec();
 }
 
 async function processRec(){
-  // Not used directly anymore — kept for compatibility
-  finalizeFromSR();
+  // Compatibility stub
+  finalizeWithTranscript((window._liveFinal||'').trim());
+}
+
+function finalizeFromSR(){
+  finalizeWithTranscript((window._liveFinal||'').trim());
 }
 
 function finalizeRec(){
